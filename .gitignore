@@ -1,0 +1,10 @@
+*
+!*/
+!*.cpp
+!*.hpp
+!*.h
+!*.txt
+!*.xml
+!*.png
+!*.jpg
+!.gitignore
