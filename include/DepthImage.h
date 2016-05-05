@@ -1,3 +1,10 @@
+/*
+ *  DepthImage.h
+ *
+ *  Created on: Apr 24, 2016
+ *  Author: Alexander Treib
+ */
+
 #ifndef DEPTHIMAGE_H
 #define DEPTHIMAGE_H
 
@@ -138,6 +145,41 @@ static PDUOFrame _pFrameData = NULL;
 
 	static event_flag *_evFrame = CreateEvent(NULL, 0, 0, NULL);
 #endif
+
+//DepthImage class
+class DepthImage
+{
+public:
+	//functions
+	DepthImage();
+	~DepthImage();
+	bool opening_duo();
+	bool get_frames(IplImage *input_left, IplImage *input_right, Mat &output_left, Mat &output_right);
+	bool create_all_trackbars(std::string windowname);
+	bool sgbm_update(StereoSGBM &sgbm);
+
+	//members
+	int m_trackbar_samples = 100;
+	//SGBM default values
+	int m_SADWindowSize = 5 ;
+	int m_numberOfDisparities = 192;
+	int m_preFilterCap = 4 ;
+	int m_minDisparity = -64 ;
+	int m_uniquenessRatio = 1 ;
+	int m_speckleWindowSize = 150 ;
+	int m_speckleRange = 2 ;
+	int m_disp12MaxDiff = 10 ;
+	int m_fullDP = true;
+	int m_P1 = 1500 ;
+	int m_P2 = 2400 ;
+
+};
+
+
+
+
+
+//DUO related stuff
 
 // One and only duo callback function
 // It sets the current frame data and signals that the new frame data is ready
