@@ -1,12 +1,12 @@
 /*
- *  DepthImage.h
- *
- *  Created on: Apr 24, 2016
- *  Author: Alexander Treib
- */
+*  DUOInput.cpp
+*  Description: Reads the input from the DUO3D stereo camera
+*  Created on: Apr 24, 2016
+*  Author: Alexander Treib
+*/
 
-#ifndef DEPTHIMAGE_H
-#define DEPTHIMAGE_H
+#ifndef DUOInput_H
+#define DUOInput_H
 
 
 // Include some generic header files
@@ -146,17 +146,17 @@ static PDUOFrame _pFrameData = NULL;
 	static event_flag *_evFrame = CreateEvent(NULL, 0, 0, NULL);
 #endif
 
-//DepthImage class
-class DepthImage
+//DUOInput class
+class DUOInput
 {
 public:
 	//functions
-	DepthImage();
-	~DepthImage();
+	DUOInput();
+	~DUOInput();
 	bool opening_duo();
 	bool get_frames(IplImage *input_left, IplImage *input_right, Mat &output_left, Mat &output_right);
 	bool create_all_trackbars(std::string windowname);
-	bool sgbm_update(StereoSGBM &sgbm);
+	StereoSGBM sgbm_settings();
 
 	//members
 	int m_trackbar_samples = 100;

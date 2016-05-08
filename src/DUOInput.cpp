@@ -1,27 +1,27 @@
 /*
- *  DepthImage.cpp
- *
+ *  DUOInput.cpp
+ *  Description: Reads the input from the DUO3D stereo camera
  *  Created on: Apr 24, 2016
  *  Author: Alexander Treib
  */
 
-#include "DepthImage.h"
+#include "DUOInput.h"
 
 #define WIDTH	320
 #define HEIGHT	240
 #define FPS		30
 
-DepthImage::DepthImage()
+DUOInput::DUOInput()
 {
 
 }
 
-DepthImage::~DepthImage()
+DUOInput::~DUOInput()
 {
 
 }
 
-bool DepthImage::opening_duo()
+bool DUOInput::opening_duo()
 {
 	// Open DUO camera and start capturing
 	if (!OpenDUOCamera(WIDTH, HEIGHT, FPS))
@@ -33,7 +33,7 @@ bool DepthImage::opening_duo()
 	return 1;
 }
 
-bool DepthImage::get_frames(IplImage *input_left, IplImage *input_right, Mat &output_left, Mat &output_right)
+bool DUOInput::get_frames(IplImage *input_left, IplImage *input_right, Mat &output_left, Mat &output_right)
 {
 	// Capture DUO frame
 	PDUOFrame pFrameData = GetDUOFrame();
@@ -52,7 +52,7 @@ bool DepthImage::get_frames(IplImage *input_left, IplImage *input_right, Mat &ou
 	return 1;
 }
 
-bool DepthImage::create_all_trackbars(std::string windowname)
+bool DUOInput::create_all_trackbars(std::string windowname)
 {
 	createTrackbar("m_SADWindowSize", windowname, &m_SADWindowSize, m_trackbar_samples);
 	createTrackbar("m_numberOfDisparities", windowname, &m_numberOfDisparities, m_trackbar_samples);
@@ -67,32 +67,29 @@ bool DepthImage::create_all_trackbars(std::string windowname)
 	return 1;
 }
 
-bool DepthImage::sgbm_update(StereoSGBM &sgbm)
+StereoSGBM DUOInput::sgbm_settings()
 {
-	//Einflusnehmende: SADWindowSize,numberOfDisparities,minDisparity,P1,P2
+	StereoSGBM sgbm;
 
-
-	//Formula to calculate ranges (due to trackbar): var=(max-min)*(trackvar/trackbar_samples)+min
-	sgbm.SADWindowSize = 100 * m_SADWindowSize / m_trackbar_samples;  //range 0 to 100
-	
-	sgbm.numberOfDisparities = 16*6;// 20 * 16 * m_numberOfDisparities / m_trackbar_samples; //range 10 to 330; divisible by 16
-	sgbm.preFilterCap = 5 * m_preFilterCap / m_trackbar_samples;
+	sgbm.SADWindowSize = m_SADWindowSize;  //range 0 to 100
+	sgbm.numberOfDisparities = m_numberOfDisparities;// 20 * 16 * m_numberOfDisparities / m_trackbar_samples; //range 10 to 330; divisible by 16
+	sgbm.preFilterCap = m_preFilterCap;
 	sgbm.minDisparity = m_minDisparity; //200 * m_minDisparity / m_trackbar_samples - 200;
-	sgbm.uniquenessRatio = 20 * m_uniquenessRatio / m_trackbar_samples + 1;
-	sgbm.speckleWindowSize = 150 * m_speckleWindowSize / m_trackbar_samples + 50;
-	sgbm.speckleRange = 1;
-	sgbm.disp12MaxDiff = 40 * m_disp12MaxDiff / m_trackbar_samples - 10;
+	sgbm.uniquenessRatio = m_uniquenessRatio;
+	sgbm.speckleWindowSize = m_speckleWindowSize;
+	sgbm.speckleRange = m_speckleRange;
+	sgbm.disp12MaxDiff = m_disp12MaxDiff;
 	sgbm.fullDP = m_fullDP;
-	sgbm.P1 = 1000 * m_P1 / m_trackbar_samples + 1000;
-	sgbm.P2 = 1000 * m_P2 / m_trackbar_samples + 2001;
-	return 1;
-}
+	sgbm.P1 = m_P1;
+	sgbm.P2 = m_P2;
 
+	return sgbm;
+}
 
 
 int main(int argc, char* argv[])
 {
-	DepthImage obj;
+	DUOInput obj;
 	obj.opening_duo();
 
 	// Create image headers for left & right frames
@@ -106,19 +103,17 @@ int main(int argc, char* argv[])
 	//create all trackbars for sgbm
 	std::string windowname = "Trackbars";
 	namedWindow(windowname, 0);
-	obj.create_all_trackbars(windowname);
+	//obj.create_all_trackbars(windowname);
 
 	// Run capture loop until <Esc> key is pressed
 	while ((cvWaitKey(1) & 0xff) != 27)
 	{
 		Mat imgLeft, imgRight, disp, disp_n;
 
-		StereoSGBM sgbm;
-
 		obj.get_frames(left, right, imgLeft, imgRight);
 
 		//readin the settings from sgbm_settings
-		obj.sgbm_update(sgbm);
+		StereoSGBM sgbm = obj.sgbm_settings();
 
 		//Calculate the disparity and normalize it (due to CV_16)
 		sgbm(imgLeft, imgRight, disp);
@@ -128,7 +123,7 @@ int main(int argc, char* argv[])
 		cout << obj.m_SADWindowSize << endl;
 		//imshow("left", imgLeft);
 		//imshow("right", imgRight);
-		imshow("DepthImage", disp_n);
+		imshow("DUOInput", disp_n);
 	}
 
 	cvReleaseImageHeader(&left);
