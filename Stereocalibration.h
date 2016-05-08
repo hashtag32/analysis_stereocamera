@@ -11,5 +11,7 @@ class Stereocalibration
 public:
 	Stereocalibration();
 	~Stereocalibration();
+	bool go();
+
 };
 

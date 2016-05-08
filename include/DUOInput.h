@@ -157,6 +157,7 @@ public:
 	bool get_frames(IplImage *input_left, IplImage *input_right, Mat &output_left, Mat &output_right);
 	bool create_all_trackbars(std::string windowname);
 	StereoSGBM sgbm_settings();
+	bool go(Mat &imgLeft, Mat &imgRight, bool lastrequest);
 
 	//members
 	int m_trackbar_samples = 100;
