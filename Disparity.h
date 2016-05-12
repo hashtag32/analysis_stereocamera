@@ -17,7 +17,7 @@ public:
 	//functions
 	bool create_all_trackbars(std::string windowname);
 	StereoSGBM sgbm_settings();
-	Mat go(Mat &imgLeft, Mat &imgRight, Mat &Q);
+	bool go(Mat &imgLeft, Mat &imgRight, Mat &disp8);
 
 	//members
 	int m_trackbar_samples = 100;

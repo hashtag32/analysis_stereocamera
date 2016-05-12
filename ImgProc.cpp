@@ -12,26 +12,34 @@ ImgProc::ImgProc()
 {
 }
 
-
 ImgProc::~ImgProc()
 {
 }
 
 
-int main()
+void main()
 {
 	ImgProc imgproc_obj;
-	Mat imgLeft, imgRight;
-	imgproc_obj.duoinput_obj.go(imgLeft,imgRight,0);
-	
-	
-	while ((cvWaitKey(1) & 0xff) != 27)
-	{
-		imshow("imgLeft", imgLeft);
-	}
+	Mat inputLeft,inputRight,imgLeft, imgRight, disp;
+	//opening the camera (like VideoCapture)
+	imgproc_obj.duoinput_obj.go(inputLeft, inputRight, 0);
 
-	imgproc_obj.stereocalibration_obj.go();
-	/*imgproc_obj.disparity_obj.go();
-	imgproc_obj.reporjection3D_obj.go();
-	imgproc_obj.objectdetect_obj.go();*/
+	
+
+	/*while ((cvWaitKey(100) & 0xff) != 27)
+	{
+		inputLeft.copyTo(imgLeft);
+		inputRight.copyTo(imgRight);
+		imgproc_obj.reprojection3D_obj.go(imgLeft, imgRight,disp);
+		namedWindow("imgLeft", 0);
+		imshow("imgLeft", imgLeft);
+		namedWindow("imgRight", 0);
+		imshow("imgRight", imgRight);
+		namedWindow("disparity", 0);
+		imshow("disparity", disp);
+	}*/
+	imgproc_obj.stereocalibration_obj.go(imgLeft,imgRight);
+	//imgproc_obj.disparity_obj.go();
+
+	//imgproc_obj.objectdetect_obj.go();
 }

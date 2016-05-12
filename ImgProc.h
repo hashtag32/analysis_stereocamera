@@ -23,7 +23,7 @@ public:
 	DUOInput duoinput_obj;
 	Stereocalibration stereocalibration_obj;
 	Disparity disparity_obj;
-	Reprojection3D reporjection3D_obj;
+	Reprojection3D reprojection3D_obj;
 	ObjectDetect objectdetect_obj;
 };
 

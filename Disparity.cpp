@@ -1,6 +1,7 @@
 /*
 *  Disparity.cpp
 *  Description: Computes a disparity image based on the calibrated, rectified images of the stereo camera
+*  Not used in realtime. Used to modify the parameters
 *  Created on: Mai 8, 2016
 *  Author: Alexander Treib
 */
@@ -35,8 +36,6 @@ bool Disparity::create_all_trackbars(std::string windowname)
 
 StereoSGBM Disparity::sgbm_settings()
 {
-
-	//!Use filestorage
 	StereoSGBM sgbm;
 
 	sgbm.SADWindowSize = m_SADWindowSize;  //range 0 to 100
@@ -54,14 +53,14 @@ StereoSGBM Disparity::sgbm_settings()
 	return sgbm;
 }
 
-Mat Disparity::go(Mat &imgLeft, Mat &imgRight, Mat &Q)
+bool Disparity::go(Mat &imgLeft, Mat &imgRight, Mat &disp8)
 {
-	Mat disp, disp_n;
+	Mat disp;
 	//readin the settings from sgbm_settings
 	StereoSGBM sgbm = this->sgbm_settings();
 
 	//Calculate the disparity and normalize it (due to CV_16)
 	sgbm(imgLeft, imgRight, disp);
-	normalize(disp, disp_n, 0, 255, CV_MINMAX, CV_8U);
-	return disp_n;
+	normalize(disp, disp8, 0, 255, CV_MINMAX, CV_8U);
+	return true;
 }
