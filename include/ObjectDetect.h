@@ -12,5 +12,8 @@ class ObjectDetect
 public:
 	ObjectDetect();
 	~ObjectDetect();
+
+	//two parts: functionality for monocamera
+	//functionality for stereocamera
 };
 

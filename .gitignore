@@ -5,7 +5,9 @@
 !*.h
 !*.txt
 !*.xml
+!*.yml
 !*.png
 !*.jpg
+!*.xyz
 !.gitignore
 !*.md
