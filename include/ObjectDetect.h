@@ -5,15 +5,21 @@
 *  Author: Alexander Treib
 */
 
+#include"externalheader.h"
 
 #pragma once
 class ObjectDetect
 {
 public:
-	ObjectDetect();
-	~ObjectDetect();
+	virtual bool function()=0;
+	virtual ~ObjectDetect();
 
-	//two parts: functionality for monocamera
-	//functionality for stereocamera
+	//Implementation in cpp
+	//bool function()
+	//{
+	//	std::cout << "function" << endl;
+	//}
+
+
 };
 
