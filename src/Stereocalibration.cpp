@@ -5,7 +5,7 @@
 *  Created on: Mai 8, 2016
 *  Author: Alexander Treib
 */
-//https://github.com/daviddoria/Examples/blob/master/c%2B%2B/OpenCV/StereoCalibration/orig.cxx
+
 #include "Stereocalibration.h"
 
 
@@ -118,7 +118,7 @@ void Stereocalibration::computecoefficients(const vector<string>& imagelist, Siz
 	m_imagePoints[0].resize(m_nimages);
 	m_imagePoints[1].resize(m_nimages);
 	m_objectPoints.resize(m_nimages);
-
+	m_nimages_size = m_nimages;
 	for (i = 0; i < m_nimages; i++)
 	{
 		for (j = 0; j < boardSize.height; j++)
@@ -133,14 +133,18 @@ void Stereocalibration::computecoefficients(const vector<string>& imagelist, Siz
 		m_cameraMatrix[0], m_distCoeffs[0],
 		m_cameraMatrix[1], m_distCoeffs[1],
 		m_imageSize, m_R, m_T, m_E, m_F,
-		TermCriteria(CV_TERMCRIT_ITER + CV_TERMCRIT_EPS, 100, 1e-5));
-	/*CV_CALIB_RATIONAL_MODEL +
-	CV_CALIB_FIX_K3 + CV_CALIB_FIX_K4 + CV_CALIB_FIX_K5);*/
+		TermCriteria(CV_TERMCRIT_ITER + CV_TERMCRIT_EPS, 100, 1e-5), 
+		CV_CALIB_ZERO_TANGENT_DIST + CV_CALIB_SAME_FOCAL_LENGTH + CV_CALIB_FIX_K3 + 
+		CV_CALIB_FIX_K4 + CV_CALIB_FIX_K5);
 	cout << "done with RMS error=" << rms << endl;
+	int test_var = 3;
+	test = test_var;
+	cout << test << endl;
 }
 
 void Stereocalibration::save_coefficients()
 {
+
 	// save intrinsic parameters
 	FileStorage fs(m_intrinsic_filename, CV_STORAGE_WRITE);
 	if (fs.isOpened())
@@ -169,6 +173,7 @@ void Stereocalibration::save_coefficients()
 
 void Stereocalibration::checkquality(bool useCalibrated , bool showRectified )
 {
+	cout << test << endl;
 	// CALIBRATION QUALITY CHECK
 	// because the output fundamental matrix implicitly
 	// includes all the output information,
@@ -178,7 +183,8 @@ void Stereocalibration::checkquality(bool useCalibrated , bool showRectified )
 	double err = 0;
 	int npoints = 0;
 	vector<Vec3f> lines[2];
-	for (i = 0; i < m_nimages; i++)
+	cout << m_nimages_size << endl;
+	for (i = 0; i < m_nimages_size; i++)
 	{
 		int npt = (int)m_imagePoints[0][i].size();
 		Mat imgpt[2];
@@ -198,6 +204,7 @@ void Stereocalibration::checkquality(bool useCalibrated , bool showRectified )
 		}
 		npoints += npt;
 	}
+	cout << err << "points" << npoints << endl;
 	cout << "average reprojection err = " << err / npoints << endl;
 
 
@@ -224,7 +231,7 @@ void Stereocalibration::checkquality(bool useCalibrated , bool showRectified )
 		vector<Point2f> allimgpt[2];
 		for (k = 0; k < 2; k++)
 		{
-			for (i = 0; i < m_nimages; i++)
+			for (i = 0; i < m_nimages_size; i++)
 				std::copy(m_imagePoints[k][i].begin(), m_imagePoints[k][i].end(), back_inserter(allimgpt[k]));
 		}
 		m_F = findFundamentalMat(Mat(allimgpt[0]), Mat(allimgpt[1]), FM_8POINT, 0, 0);
@@ -259,7 +266,7 @@ void Stereocalibration::checkquality(bool useCalibrated , bool showRectified )
 		canvas.create(h * 2, w, CV_8UC3);
 	}
 
-	for (i = 0; i < m_nimages; i++)
+	for (i = 0; i < m_nimages_size; i++)
 	{
 		for (k = 0; k < 2; k++)
 		{
@@ -295,7 +302,7 @@ void Stereocalibration::checkquality(bool useCalibrated , bool showRectified )
 bool writeImageList(const string& filename, vector<string>& imagelist)
 {
 	imagelist.resize(0);
-	for (int i = 0; i < 20; i++)
+	for (int i = 0; i < 100; i++)
 	{
 		char buffer[50];
 
@@ -327,9 +334,10 @@ bool Stereocalibration::go(Mat &imgLeft,Mat &imgRight)
 	}
 
 	this->computecoefficients(imagelist, boardSize);
+	cout << "gofunction:" << this->m_nimages << endl;
 	this->save_coefficients();
 	this->checkquality(true, showRectified);
-
+	system("pause");
 	return 1;
 }
 

@@ -26,9 +26,11 @@ public:
 	vector<string> m_goodImageList;
 	Size m_imageSize;
 	int m_nimages;
+	int m_nimages_size;
 	Mat m_R, m_T, m_E, m_F, m_P1, m_P2;
 	Mat m_R1, m_R2,  m_Q;
 	Rect m_validRoi[2];
+	int test;
 	std::string m_intrinsic_filename;
 	std::string m_extrinsic_filename;
 };

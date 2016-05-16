@@ -11,7 +11,8 @@
 #include "Stereocalibration.h"
 #include "Disparity.h"
 #include "Reprojection3D.h"
-#include "ObjectDetect.h"
+#include "ObjectDetect_Mono.h"
+#include "ObjectDetect_Stereo.h"
 
 #pragma once
 class ImgProc
@@ -24,6 +25,7 @@ public:
 	Stereocalibration stereocalibration_obj;
 	Disparity disparity_obj;
 	Reprojection3D reprojection3D_obj;
-	ObjectDetect objectdetect_obj;
+	ObjectDetect_Mono objectdetect_obj_mono;
+	ObjectDetect_Stereo objectdetect_obj_stereo;
 };
 
