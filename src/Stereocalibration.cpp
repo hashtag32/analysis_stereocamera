@@ -8,7 +8,6 @@
 
 #include "Stereocalibration.h"
 
-
 Stereocalibration::Stereocalibration()
 {
 
@@ -17,7 +16,6 @@ Stereocalibration::Stereocalibration()
 	m_intrinsic_filename = "calibration/intrinsics.yml";
 	m_extrinsic_filename = "calibration/extrinsics.yml";
 }
-
 
 Stereocalibration::~Stereocalibration()
 {
@@ -144,7 +142,6 @@ void Stereocalibration::computecoefficients(const vector<string>& imagelist, Siz
 
 void Stereocalibration::save_coefficients()
 {
-
 	// save intrinsic parameters
 	FileStorage fs(m_intrinsic_filename, CV_STORAGE_WRITE);
 	if (fs.isOpened())
