@@ -22,13 +22,15 @@ public:
 	//members
 	int m_trackbar_samples = 100;
 	//SGBM default values
-	int m_SADWindowSize = 5;
-	int m_numberOfDisparities = 192;
-	int m_preFilterCap = 4;
+	//parameters to variate
+	int m_SADWindowSize = 6;	//smoothness range: 5-15
+	int m_numberOfDisparities = 32;	//distance sensitivity 16-32-64 normally not more
+
+	int m_preFilterCap = 41;
 	int m_minDisparity = -64;
 	int m_uniquenessRatio = 1;
-	int m_speckleWindowSize = 150;
-	int m_speckleRange = 2;
+	int m_speckleWindowSize = 0;
+	int m_speckleRange = 0;
 	int m_disp12MaxDiff = 10;
 	int m_fullDP = true;
 	int m_P1 = 1500;

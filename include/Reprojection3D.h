@@ -6,6 +6,7 @@
 */
 
 #include"externalheader.h"
+#include "Disparity.h"
 
 #pragma once
 class Reprojection3D
@@ -15,12 +16,12 @@ public:
 	~Reprojection3D();
 
 	//functions
-	bool readin(float scale);
+	bool readin();
+	void save_pointcloud(const Mat& mat);
 	bool go(Mat &img1, Mat &img2, Mat &disp8);
-	bool undistort_and_rectify(Mat &img1, Mat &img2, Size imgSize);
-	bool Depthimage(Mat &img1, Mat &img2, Mat &disp8);
 
 	//members
+	Disparity disp_obj;
 	const char* m_intrinsic_filename;
 	const char* m_extrinsic_filename;
 	const char* m_disparity_filename;

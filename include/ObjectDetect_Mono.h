@@ -10,7 +10,7 @@
 #include"ObjectDetect.h"
 
 #pragma once
-class ObjectDetect_Mono:public ObjectDetect
+class ObjectDetect_Mono
 {
 public:
 	ObjectDetect_Mono();

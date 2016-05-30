@@ -7,7 +7,9 @@
 #pragma once
 
 // Include DUO and OpenCV header files
-#include <DUOLib.h>
+#include <GL/glut.h>
+#include <DUO/DUOLib.h>
+#include <DUO/Dense3DMT.h>
 #include <opencv/cv.h>
 #include <opencv/cxcore.h>
 #include <opencv2/opencv.hpp>
@@ -16,6 +18,7 @@
 #include <opencv2/calib3d/calib3d.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/contrib/contrib.hpp>
+
 
 #include <vector>
 #include <string>
@@ -29,7 +32,8 @@
 
 #include <thread>         
 #include <chrono>         
-
+#include <queue>
+#include <mutex>
 
 using namespace cv;
 using namespace std;

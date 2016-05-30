@@ -1,6 +1,6 @@
 /*
 *  Stereocalibration.cpp
-*  Description: Determines the Camera matrix and distortion coefficients on the basis of the /calibimg 
+*  Description: Determines the Camera matrix and distortion coefficients on the basis of the /calibimg
 *  Not used in realtime
 *  Created on: Mai 8, 2016
 *  Author: Alexander Treib
@@ -21,6 +21,34 @@ Stereocalibration::~Stereocalibration()
 {
 }
 
+//calibration path
+bool Stereocalibration::recordCalibImages(Mat &imgLeft, Mat &imgRight)
+{
+	//requires opening the camera (In ImgProc call DUOInput.go())
+	Mat inputLeft, inputRight;
+
+	for (int j = 0; j < 100; j++)
+	{
+		//copying the images, just to be sured the actual images is saved
+		inputLeft.copyTo(imgLeft);
+		inputRight.copyTo(imgRight);
+		char buffer[50];
+		sprintf(buffer, "calibimg/imgLeft%d.jpg", j);
+		cout << buffer << endl;
+		imwrite(buffer, imgLeft);
+		sprintf(buffer, "calibimg/imgRight%d.jpg", j);
+		imwrite(buffer, imgRight);
+
+		std::cout << "countdown:\n";
+		for (int i = 3; i > 0; --i) {
+			std::cout << i << std::endl;
+			std::this_thread::sleep_for(std::chrono::seconds(1));
+		}
+		cvWaitKey(10);
+	}
+	return 1;
+}
+
 void Stereocalibration::computecoefficients(const vector<string>& imagelist, Size boardSize)
 {
 	if (imagelist.size() % 2 != 0)
@@ -38,7 +66,7 @@ void Stereocalibration::computecoefficients(const vector<string>& imagelist, Siz
 
 	m_imagePoints[0].resize(m_nimages);
 	m_imagePoints[1].resize(m_nimages);
-	
+
 
 	for (i = j = 0; i < m_nimages; i++)
 	{
@@ -131,9 +159,9 @@ void Stereocalibration::computecoefficients(const vector<string>& imagelist, Siz
 		m_cameraMatrix[0], m_distCoeffs[0],
 		m_cameraMatrix[1], m_distCoeffs[1],
 		m_imageSize, m_R, m_T, m_E, m_F,
-		TermCriteria(CV_TERMCRIT_ITER + CV_TERMCRIT_EPS, 100, 1e-5), 
-		CV_CALIB_ZERO_TANGENT_DIST + CV_CALIB_SAME_FOCAL_LENGTH + CV_CALIB_FIX_K3 + 
-		CV_CALIB_FIX_K4 + CV_CALIB_FIX_K5);
+		TermCriteria(CV_TERMCRIT_ITER + CV_TERMCRIT_EPS, 100, 1e-5),
+		CV_CALIB_ZERO_TANGENT_DIST + CV_CALIB_SAME_FOCAL_LENGTH + CV_CALIB_FIX_K3 +
+		CV_CALIB_FIX_K4 );
 	cout << "done with RMS error=" << rms << endl;
 	int test_var = 3;
 	test = test_var;
@@ -161,15 +189,43 @@ void Stereocalibration::save_coefficients()
 	fs.open(m_extrinsic_filename, CV_STORAGE_WRITE);
 	if (fs.isOpened())
 	{
-		fs << "R" << m_R << "T" << m_T << "R1" << m_R1 << "R2" << m_R2 << "m_P1" << m_P1 << "P2" << m_P2 << "Q" << m_Q;
+		fs << "R" << m_R << "T" << m_T << "R1" << m_R1 << "R2" << m_R2 << "P1" << m_P1 << "P2" << m_P2 << "Q" << m_Q;
 		fs.release();
 	}
 	else
 		cout << "Error: can not save the extrinsic parameters\n";
 }
 
-void Stereocalibration::checkquality(bool useCalibrated , bool showRectified )
+void Stereocalibration::checkquality(bool useCalibrated, bool showRectified)
 {
+	//reading intrinsic parameters
+	FileStorage fs(m_intrinsic_filename, CV_STORAGE_READ);
+	if (!fs.isOpened())
+	{
+		printf("Failed to open file %s\n", m_intrinsic_filename);
+	}
+
+	fs["M1"] >> m_M1;
+	fs["D1"] >> m_D1;
+	fs["M2"] >> m_M2;
+	fs["D2"] >> m_D2;
+
+
+	//reading extrinsic parameters
+	fs.open(m_extrinsic_filename, CV_STORAGE_READ);
+	if (!fs.isOpened())
+	{
+		printf("Failed to open file %s\n", m_extrinsic_filename);
+	}
+
+	fs["R"] >> m_R;
+	fs["R1"] >> m_R1;
+	fs["R2"] >> m_R2;
+	fs["P1"] >> m_P1;
+	fs["P2"] >> m_P2;
+	fs["T"] >> m_T;
+	fs["Q"] >> m_Q;
+
 	cout << test << endl;
 	// CALIBRATION QUALITY CHECK
 	// because the output fundamental matrix implicitly
@@ -294,9 +350,68 @@ void Stereocalibration::checkquality(bool useCalibrated , bool showRectified )
 }
 
 
+//undistortion and rectification path
+bool Stereocalibration::readin()
+{
+	//reading intrinsic parameters
+	FileStorage fs(m_intrinsic_filename, CV_STORAGE_READ);
+	if (!fs.isOpened())
+	{
+		printf("Failed to open file %s\n", m_intrinsic_filename);
+		return 0;
+	}
+
+	fs["M1"] >> m_M1;
+	fs["D1"] >> m_D1;
+	fs["M2"] >> m_M2;
+	fs["D2"] >> m_D2;
+	m_M1 *= 1.5;
+	m_M2 *= 1.5;
+
+
+	//reading extrinsic parameters
+	fs.open(m_extrinsic_filename, CV_STORAGE_READ);
+	if (!fs.isOpened())
+	{
+		printf("Failed to open file %s\n", m_extrinsic_filename);
+		return 0;
+	}
+
+	fs["R"] >> m_R;
+	fs["R1"] >> m_R1;
+	fs["R2"] >> m_R2;
+	fs["P1"] >> m_P1;
+	fs["P2"] >> m_P2;
+	fs["T"] >> m_T;
+	fs["Q"] >> m_Q;
+	return true;
+}
+
+bool Stereocalibration::undistort_and_rectify(Mat &img1, Mat &img2)
+{
+	Size img_size = img1.size();
+	cout << "R" << m_R << "T" << m_T << "R1" << m_R1 << "R2" << m_R2 << "P1" << m_P1 << "P2" << m_P2 << "Q" << m_Q << endl;
+	//stereoRectify(m_M1, m_D1, m_M2, m_D2, img_size, m_R, m_T, m_R1, m_R2, m_P1, m_P2, m_Q, CALIB_ZERO_DISPARITY, -1, img_size, &m_roi1, &m_roi2);
+
+	Mat map11, map12, map21, map22;
+	Mat rmap[2][2];
+	//initUndistortRectifyMap(m_cameraMatrix[0], m_distCoeffs[0], m_R1, m_P1, m_imageSize, CV_16SC2, rmap[0][0], rmap[0][1]);
+	initUndistortRectifyMap(m_M1, m_D1, m_R, m_P1, img_size, CV_16SC2, rmap[0][0], rmap[0][1]);
+	initUndistortRectifyMap(m_M2, m_D2, m_R, m_P2, img_size, CV_16SC2, rmap[1][0], rmap[1][1]);
+
+	Mat img1r, img2r;
+	//emap(img, rimg, rmap[k][0], rmap[k][1], CV_INTER_LINEAR);
+	remap(img1, img1r, rmap[0][0], rmap[0][1], CV_INTER_LINEAR);
+	remap(img2, img2r, rmap[1][0], rmap[1][1], CV_INTER_LINEAR);
+
+	img1 = img1r;
+	img2 = img2r;
+	return true;
+}
+
 
 //support function
-bool writeImageList(const string& filename, vector<string>& imagelist)
+bool writeImageList(vector<string>& imagelist)
 {
 	imagelist.resize(0);
 	for (int i = 0; i < 100; i++)
@@ -309,32 +424,38 @@ bool writeImageList(const string& filename, vector<string>& imagelist)
 		sprintf(buffer, "calibimg/imgRight%d.jpg", i);
 		imagelist.push_back(buffer);
 	}
-	
 	return true;
 }
 
-bool Stereocalibration::go(Mat &imgLeft,Mat &imgRight)
+bool Stereocalibration::go(Mat &imgLeft, Mat &imgRight)
 {
-	Size boardSize;
-	string imagelistfn;
-	bool showRectified = true;
+	bool showRectified_calibration = true;
+	bool calibration = true;
+	bool newimages_calibration = false;		//will overwrite the old images
 
-	boardSize = Size(9, 6);
-	imagelistfn = "stereo_calib.xml";
+	Size boardSize = Size(9, 6);
 
-	vector<string> imagelist;
-	bool ok = writeImageList(imagelistfn, imagelist);
-	if (!ok || imagelist.empty())
-	{
-		cout << "can not open " << imagelistfn << " or the string list is empty" << endl;
-		return 0;
+	if (calibration == true){
+		if (newimages_calibration == true){
+			//writing new images 
+			this->recordCalibImages(imgLeft, imgRight);
+		}
+
+		//reading the included images from the path ./calibimg/imgLeft...
+		vector<string> imagelist;
+		bool ok = writeImageList(imagelist);
+	
+		this->computecoefficients(imagelist, boardSize);
+		this->save_coefficients();
+		this->checkquality(true, showRectified_calibration);
+	}
+	else{
+		//reading the extrinsics and intrinsic parameters from ./calibration/... .yml
+		this->readin();
+		//undistort and rectify the images
+		this->undistort_and_rectify(imgLeft, imgRight);
 	}
 
-	this->computecoefficients(imagelist, boardSize);
-	cout << "gofunction:" << this->m_nimages << endl;
-	this->save_coefficients();
-	this->checkquality(true, showRectified);
-	system("pause");
 	return 1;
 }
 

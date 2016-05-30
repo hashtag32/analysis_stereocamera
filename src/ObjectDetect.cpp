@@ -8,11 +8,6 @@
 #include "ObjectDetect.h"
 
 
-ObjectDetect::ObjectDetect()
-{
-}
-
-
 ObjectDetect::~ObjectDetect()
 {
 }

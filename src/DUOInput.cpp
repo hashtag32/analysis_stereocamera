@@ -62,8 +62,8 @@ bool DUOInput::go(Mat &imgLeft, Mat &imgRight, bool lastrequest)
 	IplImage *right = cvCreateImageHeader(cvSize(WIDTH, HEIGHT), IPL_DEPTH_8U, 1);
 
 	// Set exposure and LED brightness
-	SetGain(50);
-	SetExposure(50);
+	SetGain(0);
+	SetExposure(100);
 
 	// Get the actual frames
 	this->get_frames(left, right, imgLeft, imgRight);

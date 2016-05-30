@@ -9,7 +9,7 @@
 #include"ObjectDetect.h"
 
 #pragma once
-class ObjectDetect_Stereo: public ObjectDetect
+class ObjectDetect_Stereo
 {
 public:
 	ObjectDetect_Stereo();
