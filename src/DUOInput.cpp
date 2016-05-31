@@ -63,7 +63,7 @@ bool DUOInput::go(Mat &imgLeft, Mat &imgRight, bool lastrequest)
 
 	// Set exposure and LED brightness
 	SetGain(0);
-	SetExposure(100);
+	SetExposure(10);
 
 	// Get the actual frames
 	this->get_frames(left, right, imgLeft, imgRight);

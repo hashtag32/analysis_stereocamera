@@ -10,11 +10,11 @@
 
 Stereocalibration::Stereocalibration()
 {
-
 	m_cameraMatrix[0] = Mat::eye(3, 3, CV_64F);
 	m_cameraMatrix[1] = Mat::eye(3, 3, CV_64F);
-	m_intrinsic_filename = "calibration/intrinsics.yml";
-	m_extrinsic_filename = "calibration/extrinsics.yml";
+	m_calibration_filename = "calibration/calibration.yml";
+	m_rectification_filename = "calibration/rectification.yml";
+	m_boardSize = Size(9, 6);
 }
 
 Stereocalibration::~Stereocalibration()
@@ -25,13 +25,9 @@ Stereocalibration::~Stereocalibration()
 bool Stereocalibration::recordCalibImages(Mat &imgLeft, Mat &imgRight)
 {
 	//requires opening the camera (In ImgProc call DUOInput.go())
-	Mat inputLeft, inputRight;
 
 	for (int j = 0; j < 100; j++)
 	{
-		//copying the images, just to be sured the actual images is saved
-		inputLeft.copyTo(imgLeft);
-		inputRight.copyTo(imgRight);
 		char buffer[50];
 		sprintf(buffer, "calibimg/imgLeft%d.jpg", j);
 		cout << buffer << endl;
@@ -40,17 +36,19 @@ bool Stereocalibration::recordCalibImages(Mat &imgLeft, Mat &imgRight)
 		imwrite(buffer, imgRight);
 
 		std::cout << "countdown:\n";
-		for (int i = 3; i > 0; --i) {
+		for (int i = 1; i > 0; --i) {
 			std::cout << i << std::endl;
 			std::this_thread::sleep_for(std::chrono::seconds(1));
 		}
-		cvWaitKey(10);
 	}
 	return 1;
 }
 
-void Stereocalibration::computecoefficients(const vector<string>& imagelist, Size boardSize)
+void Stereocalibration::computecoefficients()
 {
+	vector<string> imagelist;
+	bool ok = this->loadImageList(imagelist);
+
 	if (imagelist.size() % 2 != 0)
 	{
 		cout << "Error: the image list contains odd (non-even) number of elements\n";
@@ -93,7 +91,7 @@ void Stereocalibration::computecoefficients(const vector<string>& imagelist, Siz
 					timg = img;
 				else
 					resize(img, timg, Size(), scale, scale);
-				found = findChessboardCorners(timg, boardSize, corners,
+				found = findChessboardCorners(timg, m_boardSize, corners,
 					CV_CALIB_CB_ADAPTIVE_THRESH | CV_CALIB_CB_NORMALIZE_IMAGE);
 				if (found)
 				{
@@ -110,7 +108,7 @@ void Stereocalibration::computecoefficients(const vector<string>& imagelist, Siz
 				cout << filename << endl;
 				Mat cimg, cimg1;
 				cvtColor(img, cimg, COLOR_GRAY2BGR);
-				drawChessboardCorners(cimg, boardSize, corners, found);
+				drawChessboardCorners(cimg, m_boardSize, corners, found);
 				double sf = 640. / MAX(img.rows, img.cols);
 				resize(cimg, cimg1, Size(), sf, sf);
 				imshow("corners", cimg1);
@@ -147,8 +145,8 @@ void Stereocalibration::computecoefficients(const vector<string>& imagelist, Siz
 	m_nimages_size = m_nimages;
 	for (i = 0; i < m_nimages; i++)
 	{
-		for (j = 0; j < boardSize.height; j++)
-			for (k = 0; k < boardSize.width; k++)
+		for (j = 0; j < m_boardSize.height; j++)
+			for (k = 0; k < m_boardSize.width; k++)
 				m_objectPoints[i].push_back(Point3f(k*squareSize, j*squareSize, 0));
 	}
 
@@ -161,72 +159,34 @@ void Stereocalibration::computecoefficients(const vector<string>& imagelist, Siz
 		m_imageSize, m_R, m_T, m_E, m_F,
 		TermCriteria(CV_TERMCRIT_ITER + CV_TERMCRIT_EPS, 100, 1e-5),
 		CV_CALIB_ZERO_TANGENT_DIST + CV_CALIB_SAME_FOCAL_LENGTH + CV_CALIB_FIX_K3 +
-		CV_CALIB_FIX_K4 );
+		CV_CALIB_FIX_K4);
+
 	cout << "done with RMS error=" << rms << endl;
 	int test_var = 3;
 	test = test_var;
 	cout << test << endl;
+
+	//save intrinsic parameters
+	this->write_calibrationFiles(1, 0);
 }
 
-void Stereocalibration::save_coefficients()
+void Stereocalibration::rectification()
 {
-	// save intrinsic parameters
-	FileStorage fs(m_intrinsic_filename, CV_STORAGE_WRITE);
-	if (fs.isOpened())
-	{
-		fs << "M1" << m_cameraMatrix[0] << "D1" << m_distCoeffs[0] <<
-			"M2" << m_cameraMatrix[1] << "D2" << m_distCoeffs[1];
-		fs.release();
-	}
-	else
-		cout << "Error: can not save the intrinsic parameters\n";
-
+	//readin the calibration parameters to calibration.yml
+	this->readin(true, false);
+	//Rectification
 	stereoRectify(m_cameraMatrix[0], m_distCoeffs[0],
 		m_cameraMatrix[1], m_distCoeffs[1],
 		m_imageSize, m_R, m_T, m_R1, m_R2, m_P1, m_P2, m_Q,
 		CALIB_ZERO_DISPARITY, 1, m_imageSize, &m_validRoi[0], &m_validRoi[1]);
-
-	fs.open(m_extrinsic_filename, CV_STORAGE_WRITE);
-	if (fs.isOpened())
-	{
-		fs << "R" << m_R << "T" << m_T << "R1" << m_R1 << "R2" << m_R2 << "P1" << m_P1 << "P2" << m_P2 << "Q" << m_Q;
-		fs.release();
-	}
-	else
-		cout << "Error: can not save the extrinsic parameters\n";
+	//write the rectification parameters to rectification.yml
+	this->write_calibrationFiles(false, true);
 }
 
 void Stereocalibration::checkquality(bool useCalibrated, bool showRectified)
 {
 	//reading intrinsic parameters
-	FileStorage fs(m_intrinsic_filename, CV_STORAGE_READ);
-	if (!fs.isOpened())
-	{
-		printf("Failed to open file %s\n", m_intrinsic_filename);
-	}
-
-	fs["M1"] >> m_M1;
-	fs["D1"] >> m_D1;
-	fs["M2"] >> m_M2;
-	fs["D2"] >> m_D2;
-
-
-	//reading extrinsic parameters
-	fs.open(m_extrinsic_filename, CV_STORAGE_READ);
-	if (!fs.isOpened())
-	{
-		printf("Failed to open file %s\n", m_extrinsic_filename);
-	}
-
-	fs["R"] >> m_R;
-	fs["R1"] >> m_R1;
-	fs["R2"] >> m_R2;
-	fs["P1"] >> m_P1;
-	fs["P2"] >> m_P2;
-	fs["T"] >> m_T;
-	fs["Q"] >> m_Q;
-
-	cout << test << endl;
+	this->readin(true, true);
 	// CALIBRATION QUALITY CHECK
 	// because the output fundamental matrix implicitly
 	// includes all the output information,
@@ -349,48 +309,95 @@ void Stereocalibration::checkquality(bool useCalibrated, bool showRectified)
 	}
 }
 
-
-//undistortion and rectification path
-bool Stereocalibration::readin()
+bool Stereocalibration::write_calibrationFiles(bool calibration, bool rectification)
 {
-	//reading intrinsic parameters
-	FileStorage fs(m_intrinsic_filename, CV_STORAGE_READ);
-	if (!fs.isOpened())
+	// save calibration parameters
+	if (calibration)
 	{
-		printf("Failed to open file %s\n", m_intrinsic_filename);
-		return 0;
+		FileStorage fs(m_calibration_filename, CV_STORAGE_WRITE);
+		if (fs.isOpened())
+		{
+			fs << "M1" << m_cameraMatrix[0] << "D1" << m_distCoeffs[0] <<
+				"M2" << m_cameraMatrix[1] << "D2" << m_distCoeffs[1] << "R" << m_R << "T" << m_T << "E" << m_E << "F" << m_F;
+			fs.release();
+		}
+		else{
+			cout << "Error: can not save the intrinsic parameters\n";
+			return 0;
+		}
 	}
 
-	fs["M1"] >> m_M1;
-	fs["D1"] >> m_D1;
-	fs["M2"] >> m_M2;
-	fs["D2"] >> m_D2;
-	m_M1 *= 1.5;
-	m_M2 *= 1.5;
+	//writing rectification parametrers
+	if (rectification)
+	{
+		FileStorage fs(m_rectification_filename, CV_STORAGE_WRITE);
+		if (fs.isOpened())
+		{
+			fs << "R" << m_R << "T" << m_T << "R1" << m_R1 << "R2" << m_R2 << "P1" << m_P1 << "P2" << m_P2 << "Q" << m_Q;
+			fs.release();
+		}
+		else{
+			cout << "Error: can not save the extrinsic parameters\n";
+			return 0;
+		}
+	}
+	return 1;
+}
+
+
+//undistortion and rectification path (gothrough path)
+bool Stereocalibration::readin(bool calibration, bool rectification)
+{
+	//reading intrinsic parameters
+	if (calibration)
+	{
+		cout << "calibration" << endl;
+		FileStorage fs(m_calibration_filename, CV_STORAGE_READ);
+		cout << "calibraiton success" << endl;
+		if (!fs.isOpened())
+		{
+			printf("Failed to open file %s\n", m_calibration_filename);
+			return 0;
+		}
+
+		fs["M1"] >> m_M1;
+		fs["D1"] >> m_D1;
+		fs["M2"] >> m_M2;
+		fs["D2"] >> m_D2;
+		fs["R"] >> m_R;
+		fs["T"] >> m_T;
+		fs["E"] >> m_E;
+		fs["F"] >> m_F;
+		m_M1 *= 1.5;
+		m_M2 *= 1.5;
+		fs.release();
+	}
 
 
 	//reading extrinsic parameters
-	fs.open(m_extrinsic_filename, CV_STORAGE_READ);
-	if (!fs.isOpened())
+	if (rectification)
 	{
-		printf("Failed to open file %s\n", m_extrinsic_filename);
-		return 0;
+		FileStorage fs(m_rectification_filename, CV_STORAGE_READ);
+		if (!fs.isOpened())
+		{
+			printf("Failed to open file %s\n", m_rectification_filename);
+			return 0;
+		}
+		fs["R1"] >> m_R1;
+		fs["R2"] >> m_R2;
+		fs["P1"] >> m_P1;
+		fs["P2"] >> m_P2;
+		fs["T"] >> m_T;
+		fs["Q"] >> m_Q;
+		fs.release();
 	}
-
-	fs["R"] >> m_R;
-	fs["R1"] >> m_R1;
-	fs["R2"] >> m_R2;
-	fs["P1"] >> m_P1;
-	fs["P2"] >> m_P2;
-	fs["T"] >> m_T;
-	fs["Q"] >> m_Q;
 	return true;
 }
 
 bool Stereocalibration::undistort_and_rectify(Mat &img1, Mat &img2)
 {
+	this->readin(true, true);
 	Size img_size = img1.size();
-	cout << "R" << m_R << "T" << m_T << "R1" << m_R1 << "R2" << m_R2 << "P1" << m_P1 << "P2" << m_P2 << "Q" << m_Q << endl;
 	//stereoRectify(m_M1, m_D1, m_M2, m_D2, img_size, m_R, m_T, m_R1, m_R2, m_P1, m_P2, m_Q, CALIB_ZERO_DISPARITY, -1, img_size, &m_roi1, &m_roi2);
 
 	Mat map11, map12, map21, map22;
@@ -411,10 +418,10 @@ bool Stereocalibration::undistort_and_rectify(Mat &img1, Mat &img2)
 
 
 //support function
-bool writeImageList(vector<string>& imagelist)
+bool Stereocalibration::loadImageList(vector<string>& imagelist)
 {
 	imagelist.resize(0);
-	for (int i = 0; i < 100; i++)
+	for (int i = 0; i < 10; i++)
 	{
 		char buffer[50];
 
@@ -429,71 +436,27 @@ bool writeImageList(vector<string>& imagelist)
 
 bool Stereocalibration::go(Mat &imgLeft, Mat &imgRight)
 {
-	bool showRectified_calibration = true;
-	bool calibration = true;
+	//settings for calibration -> default: all false
 	bool newimages_calibration = false;		//will overwrite the old images
+	bool calibration = true;				//will compute the distortion coefficients -> will be saved in calibration.yml
+	bool showRectified_calibration = true;	//show result after calibration
+	bool rectification = true;				//will copute the rectification coefficients -> will be saved in rectification.yml
+	bool qualitycheck = true;
 
-	Size boardSize = Size(9, 6);
-
-	if (calibration == true){
-		if (newimages_calibration == true){
-			//writing new images 
-			this->recordCalibImages(imgLeft, imgRight);
-		}
-
-		//reading the included images from the path ./calibimg/imgLeft...
-		vector<string> imagelist;
-		bool ok = writeImageList(imagelist);
-	
-		this->computecoefficients(imagelist, boardSize);
-		this->save_coefficients();
+	if (newimages_calibration == true)
+		//writing new images 
+		this->recordCalibImages(imgLeft, imgRight);
+	if (calibration == true)
+		this->computecoefficients();
+	if (rectification == true)
+		this->rectification();
+	if (qualitycheck == true)
 		this->checkquality(true, showRectified_calibration);
-	}
-	else{
-		//reading the extrinsics and intrinsic parameters from ./calibration/... .yml
-		this->readin();
+
+	//gothrough path
+	if ((newimages_calibration == false) && (calibration == false) && (rectification == false) && (qualitycheck == false)){
 		//undistort and rectify the images
 		this->undistort_and_rectify(imgLeft, imgRight);
 	}
-
 	return 1;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//inserted existing code
-
-//bool Stereocalibration::go()
-//{
-//	return 1;
-//}

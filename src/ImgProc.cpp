@@ -25,10 +25,7 @@ void main()
 	imgproc_obj.duoinput_obj.go(inputLeft, inputRight, 0);
 	int i;
 	
-	inputLeft.copyTo(imgLeft);
-	inputRight.copyTo(imgRight);
-	
-	imgproc_obj.stereocalibration_obj.go(imgLeft, imgRight);
+	imgproc_obj.stereocalibration_obj.go(inputLeft, inputRight);
 
 	while ((cvWaitKey(100) & 0xff) != 27)
 	{
@@ -37,7 +34,7 @@ void main()
 	//imgproc_obj.stereocalibration_obj.go(imgLeft, imgRight);
 	imgproc_obj.disparity_obj.go(imgLeft, imgRight,disp);
 	//result is saved in pointcloud.ply
-	imgproc_obj.reprojection3D_obj.go(imgLeft, imgRight, disp);
+	//imgproc_obj.reprojection3D_obj.go(imgLeft, imgRight, disp);
 	namedWindow("imgLeft", 0);
 	imshow("imgLeft", imgLeft);
 	namedWindow("imgRight", 0);

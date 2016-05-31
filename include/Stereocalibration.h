@@ -13,16 +13,21 @@ public:
 	Stereocalibration();
 	~Stereocalibration();
 	//functions
-	void computecoefficients(const vector<string>& imagelist, Size boardSize);
-	void save_coefficients();
-	void checkquality(bool useCalibrated = true, bool showRectified = true);
 	bool recordCalibImages(Mat &imgLeft, Mat &imgRight);
-	bool readin();
+	void computecoefficients();
+	void rectification();
+	void checkquality(bool useCalibrated = true, bool showRectified = true);
+	bool write_calibrationFiles(bool calibration, bool rectification);
+	bool loadImageList(vector<string>& imagelist);
+
+	bool readin(bool calibration, bool rectification);
 	bool undistort_and_rectify(Mat &img1, Mat &img2);
+
 	bool go(Mat &imgLet, Mat &imgRight);
 	
 
 	//members
+	Size m_boardSize;
 	vector<vector<Point2f> > m_imagePoints[2];
 	vector<vector<Point3f> > m_objectPoints;
 	Mat m_cameraMatrix[2], m_distCoeffs[2];
@@ -33,7 +38,7 @@ public:
 	Mat m_Q, m_M1, m_D1, m_M2, m_D2, m_R, m_R1, m_P1, m_R2, m_P2, m_T, m_E, m_F;
 	Rect m_validRoi[2];
 	int test;
-	std::string m_intrinsic_filename;
-	std::string m_extrinsic_filename;
+	std::string m_calibration_filename;
+	std::string m_rectification_filename;
 };
 
