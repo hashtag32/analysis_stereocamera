@@ -22,8 +22,8 @@ public:
 
 	//members
 	Disparity disp_obj;
-	const char* m_intrinsic_filename;
-	const char* m_extrinsic_filename;
+	const char* m_calibration_filename;
+	const char* m_rectification_filename;
 	const char* m_disparity_filename;
 	const char* m_point_cloud_filename;
 	int m_SADWindowSize;

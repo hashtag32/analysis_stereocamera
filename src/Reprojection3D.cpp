@@ -9,8 +9,8 @@
 
 Reprojection3D::Reprojection3D()
 {
-	m_intrinsic_filename = "calibration/intrinsics.yml";
-	m_extrinsic_filename = "calibration/extrinsics.yml";
+	m_calibration_filename = "calibration/calibration.yml";
+	m_rectification_filename = "calibration/rectification.yml";
 	m_disparity_filename = "results/disparityoutput.jpg";
 	m_point_cloud_filename = "results/npointcloud.ply";
 	m_SADWindowSize = 15;
@@ -25,37 +25,35 @@ Reprojection3D::~Reprojection3D()
 
 bool Reprojection3D::readin()
 {
-	//reading intrinsic parameters
-	FileStorage fs(m_intrinsic_filename, CV_STORAGE_READ);
-	if (!fs.isOpened())
+	//reading calibration parameters
+	FileStorage fs_calib(m_calibration_filename, CV_STORAGE_READ);
+	if (!fs_calib.isOpened())
 	{
-		printf("Failed to open file %s\n", m_intrinsic_filename);
+		printf("Failed to open file %s\n", m_calibration_filename);
 		return 0;
 	}
-
-	fs["M1"] >> m_M1;
-	fs["D1"] >> m_D1;
-	fs["M2"] >> m_M2;
-	fs["D2"] >> m_D2;
+	fs_calib["M1"] >> m_M1;
+	fs_calib["D1"] >> m_D1;
+	fs_calib["M2"] >> m_M2;
+	fs_calib["D2"] >> m_D2;
 	m_M1 *= 1.5;
 	m_M2 *= 1.5;
+	fs_calib.release();
 
-
-	//reading extrinsic parameters
-	fs.open(m_extrinsic_filename, CV_STORAGE_READ);
-	if (!fs.isOpened())
+	//reading rectification parameters
+	FileStorage fs_rect(m_rectification_filename, CV_STORAGE_READ);
+	if (!fs_rect.isOpened())
 	{
-		printf("Failed to open file %s\n", m_extrinsic_filename);
+		printf("Failed to open file %s\n", m_rectification_filename);
 		return 0;
 	}
+	fs_rect["R1"] >> m_R1;
+	fs_rect["R2"] >> m_R2;
+	fs_rect["P1"] >> m_P1;
+	fs_rect["P2"] >> m_P2;
+	fs_rect["Q"] >> m_Q;
+	fs_rect.release();
 
-	fs["R"] >> m_R;
-	fs["R1"] >> m_R1;
-	fs["R2"] >> m_R2;
-	fs["P1"] >> m_P1;
-	fs["P2"] >> m_P2;
-	fs["T"] >> m_T;
-	fs["Q"] >> m_Q;
 	return true;
 }
 
@@ -63,7 +61,7 @@ void Reprojection3D::save_pointcloud(const Mat& mat)
 {
 	//opening file
 	const double max_z = 1.0e4;
-	FILE* pointcloudfile = fopen("results/pointcloud.ply", "wt");
+	FILE* pointcloudfile = fopen("results/pointcloud_buf.ply", "wt");
 
 	//Collecting the point cloud
 	std::string filebuffer;
@@ -74,7 +72,7 @@ void Reprojection3D::save_pointcloud(const Mat& mat)
 		{
 			Vec3f point = mat.at<Vec3f>(y, x);
 			if (fabs(point[2] - max_z) < FLT_EPSILON || fabs(point[2]) > max_z) continue;
-			char tmp[100]="";
+			char tmp[100] = "";
 			sprintf(tmp, "%f %f %f\n", point[0], point[1], point[2]);
 			filebuffer.append(tmp);
 			vertex++;
@@ -83,12 +81,17 @@ void Reprojection3D::save_pointcloud(const Mat& mat)
 
 	//writing the ply file
 	std::string header = "ply\nformat ascii 1.0\nelement vertex " + std::to_string(vertex) + "\nproperty float32 x\nproperty float32 y\nproperty float32 z\nend_header\n";
-	
+
 	//writing everything to
 	fprintf(pointcloudfile, header.c_str());
 	fprintf(pointcloudfile, filebuffer.c_str());
 
 	fclose(pointcloudfile);
+
+	//copying -> always have the latest result
+	std::ifstream  src("results/pointcloud_buf.ply", std::ios::binary);
+	std::ofstream  dst("results/pointcloud.ply", std::ios::binary);
+	dst << src.rdbuf();
 }
 
 
@@ -111,7 +114,7 @@ bool Reprojection3D::go(Mat &img1, Mat &img2, Mat &depthimage)
 	this->readin();
 
 
-	while (((cvWaitKey(100) & 0xff) != 27) && (show_images==1))
+	while (((cvWaitKey(100) & 0xff) != 27) && (show_images == 1))
 	{
 		namedWindow("left", 1);
 		imshow("left", img1);

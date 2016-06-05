@@ -158,8 +158,10 @@ void Stereocalibration::computecoefficients()
 		m_cameraMatrix[1], m_distCoeffs[1],
 		m_imageSize, m_R, m_T, m_E, m_F,
 		TermCriteria(CV_TERMCRIT_ITER + CV_TERMCRIT_EPS, 100, 1e-5),
-		CV_CALIB_ZERO_TANGENT_DIST + CV_CALIB_SAME_FOCAL_LENGTH + CV_CALIB_FIX_K3 +
-		CV_CALIB_FIX_K4);
+		CV_CALIB_FIX_ASPECT_RATIO +
+		CV_CALIB_ZERO_TANGENT_DIST +
+		CV_CALIB_SAME_FOCAL_LENGTH +
+		CV_CALIB_FIX_K3 + CV_CALIB_FIX_K4 + CV_CALIB_FIX_K5);
 
 	cout << "done with RMS error=" << rms << endl;
 	int test_var = 3;
@@ -172,8 +174,9 @@ void Stereocalibration::computecoefficients()
 
 void Stereocalibration::rectification()
 {
-	//readin the calibration parameters to calibration.yml
+	//readin the calibration parameters from calibration.yml
 	this->readin(true, false);
+
 	//Rectification
 	stereoRectify(m_cameraMatrix[0], m_distCoeffs[0],
 		m_cameraMatrix[1], m_distCoeffs[1],
@@ -351,9 +354,7 @@ bool Stereocalibration::readin(bool calibration, bool rectification)
 	//reading intrinsic parameters
 	if (calibration)
 	{
-		cout << "calibration" << endl;
 		FileStorage fs(m_calibration_filename, CV_STORAGE_READ);
-		cout << "calibraiton success" << endl;
 		if (!fs.isOpened())
 		{
 			printf("Failed to open file %s\n", m_calibration_filename);
@@ -396,23 +397,102 @@ bool Stereocalibration::readin(bool calibration, bool rectification)
 
 bool Stereocalibration::undistort_and_rectify(Mat &img1, Mat &img2)
 {
+	cout << "undistort" << endl;
 	this->readin(true, true);
-	Size img_size = img1.size();
-	//stereoRectify(m_M1, m_D1, m_M2, m_D2, img_size, m_R, m_T, m_R1, m_R2, m_P1, m_P2, m_Q, CALIB_ZERO_DISPARITY, -1, img_size, &m_roi1, &m_roi2);
 
-	Mat map11, map12, map21, map22;
-	Mat rmap[2][2];
-	//initUndistortRectifyMap(m_cameraMatrix[0], m_distCoeffs[0], m_R1, m_P1, m_imageSize, CV_16SC2, rmap[0][0], rmap[0][1]);
-	initUndistortRectifyMap(m_M1, m_D1, m_R, m_P1, img_size, CV_16SC2, rmap[0][0], rmap[0][1]);
-	initUndistortRectifyMap(m_M2, m_D2, m_R, m_P2, img_size, CV_16SC2, rmap[1][0], rmap[1][1]);
+	Mat rmap[2][2], img1r, img2r;
+	initUndistortRectifyMap(m_M1, m_D1, m_R1, m_P1, img1.size(), CV_16SC2, rmap[0][0], rmap[0][1]);
+	initUndistortRectifyMap(m_M2, m_D2, m_R2, m_P2, img2.size(), CV_16SC2, rmap[1][0], rmap[1][1]);
 
-	Mat img1r, img2r;
-	//emap(img, rimg, rmap[k][0], rmap[k][1], CV_INTER_LINEAR);
 	remap(img1, img1r, rmap[0][0], rmap[0][1], CV_INTER_LINEAR);
 	remap(img2, img2r, rmap[1][0], rmap[1][1], CV_INTER_LINEAR);
 
 	img1 = img1r;
 	img2 = img2r;
+
+
+	bool isVerticalStereo = false;
+	bool useCalibrated = true;
+	m_imageSize = img1.size();
+	Mat canvas;
+	double sf;
+	int w, h, j, i;
+
+	return 0;
+	if (!isVerticalStereo)
+	{
+		sf = 600. / MAX(m_imageSize.width, m_imageSize.height);
+		w = cvRound(m_imageSize.width*sf);
+		h = cvRound(m_imageSize.height*sf);
+		canvas.create(h, w * 2, CV_8UC3);
+	}
+	else
+	{
+		sf = 300. / MAX(m_imageSize.width, m_imageSize.height);
+		w = cvRound(m_imageSize.width*sf);
+		h = cvRound(m_imageSize.height*sf);
+		canvas.create(h * 2, w, CV_8UC3);
+	}
+
+
+	//Leftimage
+	int k = 0;
+	Mat img = img1, rimg, cimg;
+	remap(img, rimg, rmap[k][0], rmap[k][1], CV_INTER_LINEAR);
+	cvtColor(rimg, cimg, COLOR_GRAY2BGR);
+	Mat canvasPart = !isVerticalStereo ? canvas(Rect(w*k, 0, w, h)) : canvas(Rect(0, h*k, w, h));
+	resize(cimg, canvasPart, canvasPart.size(), 0, 0, CV_INTER_AREA);
+	if (useCalibrated)
+	{
+		Rect vroi(cvRound(m_validRoi[k].x*sf), cvRound(m_validRoi[k].y*sf),
+			cvRound(m_validRoi[k].width*sf), cvRound(m_validRoi[k].height*sf));
+		rectangle(canvasPart, vroi, Scalar(0, 0, 255), 3, 8);
+	}
+
+	if (!isVerticalStereo)
+		for (j = 0; j < canvas.rows; j += 16)
+			line(canvas, Point(0, j), Point(canvas.cols, j), Scalar(0, 255, 0), 1, 8);
+	else
+		for (j = 0; j < canvas.cols; j += 16)
+			line(canvas, Point(j, 0), Point(j, canvas.rows), Scalar(0, 255, 0), 1, 8);
+	//imshow("rectified", canvas);
+
+	img1 = canvas;
+
+
+	/*for (i = 0; i < m_nimages_size; i++)
+	{
+	for (k = 0; k < 2; k++)
+	{
+	Mat img = imread(m_goodImageList[i * 2 + k], 0), rimg, cimg;
+	remap(img, rimg, rmap[k][0], rmap[k][1], CV_INTER_LINEAR);
+	cvtColor(rimg, cimg, COLOR_GRAY2BGR);
+	Mat canvasPart = !isVerticalStereo ? canvas(Rect(w*k, 0, w, h)) : canvas(Rect(0, h*k, w, h));
+	resize(cimg, canvasPart, canvasPart.size(), 0, 0, CV_INTER_AREA);
+	if (useCalibrated)
+	{
+	Rect vroi(cvRound(m_validRoi[k].x*sf), cvRound(m_validRoi[k].y*sf),
+	cvRound(m_validRoi[k].width*sf), cvRound(m_validRoi[k].height*sf));
+	rectangle(canvasPart, vroi, Scalar(0, 0, 255), 3, 8);
+	}
+	}
+
+	if (!isVerticalStereo)
+	for (j = 0; j < canvas.rows; j += 16)
+	line(canvas, Point(0, j), Point(canvas.cols, j), Scalar(0, 255, 0), 1, 8);
+	else
+	for (j = 0; j < canvas.cols; j += 16)
+	line(canvas, Point(j, 0), Point(j, canvas.rows), Scalar(0, 255, 0), 1, 8);
+	imshow("rectified", canvas);
+	char c = (char)waitKey();
+	if (c == 27 || c == 'q' || c == 'Q')
+	break;
+	}
+	*/
+
+
+
+
 	return true;
 }
 
@@ -421,7 +501,7 @@ bool Stereocalibration::undistort_and_rectify(Mat &img1, Mat &img2)
 bool Stereocalibration::loadImageList(vector<string>& imagelist)
 {
 	imagelist.resize(0);
-	for (int i = 0; i < 10; i++)
+	for (int i = 0; i < 40; i++)
 	{
 		char buffer[50];
 
@@ -438,10 +518,10 @@ bool Stereocalibration::go(Mat &imgLeft, Mat &imgRight)
 {
 	//settings for calibration -> default: all false
 	bool newimages_calibration = false;		//will overwrite the old images
-	bool calibration = true;				//will compute the distortion coefficients -> will be saved in calibration.yml
-	bool showRectified_calibration = true;	//show result after calibration
-	bool rectification = true;				//will copute the rectification coefficients -> will be saved in rectification.yml
-	bool qualitycheck = true;
+	bool calibration = false;				//will compute the distortion coefficients -> will be saved in calibration.yml
+	bool rectification = false;				//will copute the rectification coefficients -> will be saved in rectification.yml
+	bool showRectified_calibration = false;	//show result after calibration
+	bool qualitycheck = false;
 
 	if (newimages_calibration == true)
 		//writing new images 
@@ -450,12 +530,13 @@ bool Stereocalibration::go(Mat &imgLeft, Mat &imgRight)
 		this->computecoefficients();
 	if (rectification == true)
 		this->rectification();
-	if (qualitycheck == true)
+	if (calibration == true && rectification == true && qualitycheck == true)
 		this->checkquality(true, showRectified_calibration);
 
 	//gothrough path
 	if ((newimages_calibration == false) && (calibration == false) && (rectification == false) && (qualitycheck == false)){
 		//undistort and rectify the images
+		//imgLeft= imread("calibimg/imgLeft0.jpg");
 		this->undistort_and_rectify(imgLeft, imgRight);
 	}
 	return 1;

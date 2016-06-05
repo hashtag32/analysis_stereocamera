@@ -19,15 +19,6 @@ ObjectDetect_Mono::~ObjectDetect_Mono()
 }
 
 
-
-
-
-
-
-
-
-
-
 //initial min and max HSV filter values.
 //these will be changed using trackbars
 int H_MIN = 0;
@@ -50,6 +41,7 @@ const string windowName1 = "HSV Image";
 const string windowName2 = "Thresholded Image";
 const string windowName3 = "After Morphological Operations";
 const string trackbarWindowName = "Trackbars";
+
 void on_trackbar(int, void*)
 {//This function gets called whenever a
 	// trackbar position is changed
@@ -189,7 +181,7 @@ bool ObjectDetect_Mono::go()
 {
 	//some boolean variables for different functionality within this
 	//program
-	bool trackObjects = false;
+	bool trackObjects = true;
 	bool useMorphOps = true;
 	//Matrix to store each frame of the webcam feed
 	Mat cameraFeed;
@@ -204,7 +196,7 @@ bool ObjectDetect_Mono::go()
 	//video capture object to acquire webcam feed
 	VideoCapture capture;
 	//open capture object at location zero (default location for webcam)
-	capture.open(1);
+	capture.open(0);
 	//set height and width of capture frame
 	capture.set(CV_CAP_PROP_FRAME_WIDTH, FRAME_WIDTH);
 	capture.set(CV_CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT);

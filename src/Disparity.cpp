@@ -70,7 +70,7 @@ bool Disparity::go(Mat &imgLeft, Mat &imgRight, Mat &disp8)
 	disp_norm.convertTo(disp8, CV_8UC1, 255 / (max - min), -min);
 
 	//Colorize with rainbow settings
-	//applyColorMap(disp_norm, disp8, cv::COLORMAP_HSV);
+	applyColorMap(disp_norm, disp8, cv::COLORMAP_HSV);
 
 	return true;
 }

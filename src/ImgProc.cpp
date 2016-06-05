@@ -17,7 +17,13 @@ ImgProc::~ImgProc()
 }
 
 
-void main()
+int main()
+{
+	ImgProc imgproc_obj;
+	imgproc_obj.objectdetect_obj_mono.go();
+}
+
+void go()
 {
 	ImgProc imgproc_obj;
 	Mat inputLeft, inputRight, imgLeft, imgRight, disp;
@@ -25,7 +31,7 @@ void main()
 	imgproc_obj.duoinput_obj.go(inputLeft, inputRight, 0);
 	int i;
 	
-	imgproc_obj.stereocalibration_obj.go(inputLeft, inputRight);
+	//imgproc_obj.stereocalibration_obj.go(inputLeft, inputRight);
 
 	while ((cvWaitKey(100) & 0xff) != 27)
 	{
@@ -34,7 +40,9 @@ void main()
 	//imgproc_obj.stereocalibration_obj.go(imgLeft, imgRight);
 	imgproc_obj.disparity_obj.go(imgLeft, imgRight,disp);
 	//result is saved in pointcloud.ply
-	//imgproc_obj.reprojection3D_obj.go(imgLeft, imgRight, disp);
+	imgproc_obj.reprojection3D_obj.go(imgLeft, imgRight, disp);
+	imwrite("left.jpg", imgLeft);
+	imwrite("disparity.jpg", disp);
 	namedWindow("imgLeft", 0);
 	imshow("imgLeft", imgLeft);
 	namedWindow("imgRight", 0);
@@ -45,9 +53,9 @@ void main()
 	
 	//imgproc_obj.disparity_obj.go(imgLeft,imgRight, disp);
 	
-	imgproc_obj.disparity_obj.go(imgLeft, imgRight, disp);
+	//imgproc_obj.disparity_obj.go(imgLeft, imgRight, disp);
 	//result is saved in pointcloud.ply
-	imgproc_obj.reprojection3D_obj.go(imgLeft, imgRight, disp);
+	//imgproc_obj.reprojection3D_obj.go(imgLeft, imgRight, disp);
 
 	//imgproc_obj.objectdetect_obj_mono.go();
 }

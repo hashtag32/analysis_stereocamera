@@ -29,6 +29,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <math.h>
+#include <fstream>
 
 #include <thread>         
 #include <chrono>         
