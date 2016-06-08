@@ -82,7 +82,7 @@ int go(int argc, char* argv[])
 		printf("Could not open Dense3DMT\n");
 		return 1;
 	}
-	if (!SetDense3DLicense(dense3d, "HLAHV-TJ335-4TOH2-67BLK-V5FKD")) // <-- Put your Dense3D license
+	if (!SetDense3DLicense(dense3d, "SECRET")) // <-- Put your Dense3D license
 	{
 		printf("Invalid or missing Dense3D license. To get your license visit https://duo3d.com/account\n");
 		// Close Dense3D library
